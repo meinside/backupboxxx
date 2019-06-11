@@ -29,8 +29,8 @@ type config struct {
 var _usersDir string
 
 // loggers
-var _stdout = log.New(os.Stdout, "", log.LstdFlags)
-var _stderr = log.New(os.Stderr, "", log.LstdFlags)
+var _stdout = log.New(os.Stdout, "", 0)
+var _stderr = log.New(os.Stderr, "", 0)
 
 // setup os-specific values
 func init() {
