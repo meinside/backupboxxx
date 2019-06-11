@@ -2,8 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -27,6 +27,10 @@ type config struct {
 }
 
 var _usersDir string
+
+// loggers
+var _stdout = log.New(os.Stdout, "", log.LstdFlags)
+var _stderr = log.New(os.Stderr, "", log.LstdFlags)
 
 // setup os-specific values
 func init() {
@@ -65,7 +69,7 @@ type BackupList struct {
 // upload file to Dropbox
 func uploadFile(client files.Client, root string, path string, ignore []string) {
 	if isInList(ignore, filepath.Base(path)) {
-		fmt.Printf("> ignoring: %s\n", path)
+		_stdout.Printf("> ignoring: %s\n", path)
 		return //skip
 	}
 
@@ -76,7 +80,7 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 					uploadFile(client, root, filepath.Join(path, file.Name()), ignore)
 				}
 			} else {
-				fmt.Printf("* error while recursing directory: %s (%s)\n", path, err)
+				_stderr.Printf("* error while recursing directory: %s (%s)\n", path, err)
 			}
 		} else {
 			if reader, err := os.Open(path); err == nil {
@@ -88,16 +92,16 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 					Autorename: false,
 					Mute:       false,
 				}, reader); err == nil {
-					fmt.Printf("> uploaded successfully: %s\n", path)
+					_stdout.Printf("> uploaded successfully: %s\n", path)
 				} else {
-					fmt.Printf("* error while uploading: %s (%s)\n", path, err)
+					_stderr.Printf("* error while uploading: %s (%s)\n", path, err)
 				}
 			} else {
-				fmt.Printf("* error while reading file: %s (%s)\n", path, err)
+				_stderr.Printf("* error while reading file: %s (%s)\n", path, err)
 			}
 		}
 	} else {
-		fmt.Printf("* error while reading file: %s (%s)\n", path, err)
+		_stderr.Printf("* error while reading file: %s (%s)\n", path, err)
 	}
 }
 
@@ -109,7 +113,7 @@ func backup(client files.Client, backupListFilepath string) {
 	_files := list.Files
 	ignore := list.Ignore
 
-	fmt.Printf("> destination dir: %s\n", dirname)
+	_stdout.Printf("> destination dir: %s\n", dirname)
 
 	for _, file := range _files {
 		uploadFile(client, dirname, expandPath(file), ignore)
@@ -118,20 +122,17 @@ func backup(client files.Client, backupListFilepath string) {
 
 // read backup list file
 func readBackupList(path string) *BackupList {
-	fmt.Printf("> reading backup list file: %s\n", path)
+	_stdout.Printf("> reading backup list file: %s\n", path)
 
 	list := new(BackupList)
 	if _, err := os.Stat(path); err != nil {
-		fmt.Printf("* failed to stat config file (%s)\n", err)
-		os.Exit(1)
+		_stderr.Fatalf("* failed to stat config file (%s)\n", err)
 	} else {
 		if file, err := ioutil.ReadFile(path); err != nil {
-			fmt.Printf("* failed to read config file (%s)\n", err)
-			os.Exit(1)
+			_stderr.Fatalf("* failed to read config file (%s)\n", err)
 		} else {
 			if err := json.Unmarshal(file, &list); err != nil {
-				fmt.Printf("* failed to parse config file (%s)\n", err)
-				os.Exit(1)
+				_stderr.Fatalf("* failed to parse config file (%s)\n", err)
 			}
 		}
 	}
@@ -173,7 +174,7 @@ func isInList(list []string, element string) bool {
 
 // print usage
 func printUsage() {
-	fmt.Printf(`* usage:
+	_stdout.Printf(`> usage:
 
 # show this message
 $ ./backupboxxx -h
@@ -188,7 +189,7 @@ $ ./backupboxxx backup_list.json
 
 // print sample list
 func printSampleList() {
-	fmt.Printf(`
+	_stdout.Printf(`
 {
 	"dirname": "backup_20190605",
 	"files": [
@@ -210,9 +211,7 @@ func printSampleList() {
 
 // print error and exit
 func printErrorAndExit(err error) {
-	fmt.Println(err.Error())
-
-	os.Exit(1)
+	_stderr.Fatalf(err.Error())
 }
 
 func main() {
