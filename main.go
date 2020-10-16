@@ -88,7 +88,7 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 
 				if _, err := client.Upload(&files.CommitInfo{
 					Path:       filepath.Join("/", root, path),
-					Mode:       &files.WriteMode{Tagged: dropbox.Tagged{"overwrite"}}, // overwrite!
+					Mode:       &files.WriteMode{Tagged: dropbox.Tagged{Tag: "overwrite"}}, // overwrite!
 					Autorename: false,
 					Mute:       false,
 				}, reader); err == nil {
