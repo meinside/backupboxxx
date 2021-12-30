@@ -180,16 +180,16 @@ func printUsage() {
 	_stdout.Printf(`> usage:
 
 # show this message
-$ ./backupboxxx -h
-$ ./backupboxxx --help
+$ %[1]v -h
+$ %[1]v --help
 
 # print out a sample backup list file
-$ ./backupboxxx -g
-$ ./backupboxxx --generate
+$ %[1]v -g
+$ %[1]v --generate
 
 # do backup
-$ ./backupboxxx backup_list.json
-`)
+$ %[1]v backup_list.json
+`, os.Args[0])
 }
 
 // print sample list
@@ -223,13 +223,17 @@ func main() {
 	var conf config
 	var err error
 
+	if isInList(os.Args, "-h") || isInList(os.Args, "--help") { // help
+		printUsage()
+
+		os.Exit(0)
+	}
+
 	if conf, err = loadConf(); err == nil {
 		if len(os.Args) < 2 {
 			printUsage()
 		} else {
-			if isInList(os.Args, "-h") || isInList(os.Args, "--help") { // help
-				printUsage()
-			} else if isInList(os.Args, "-g") || isInList(os.Args, "--generate") { // generate a list file
+			if isInList(os.Args, "-g") || isInList(os.Args, "--generate") { // generate a list file
 				printSampleList()
 			} else {
 				backup(files.New(dropbox.Config{
