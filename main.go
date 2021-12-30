@@ -10,20 +10,23 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox"
-	"github.com/dropbox/dropbox-sdk-go-unofficial/dropbox/files"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
+	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
 )
 
 const (
 	configFilepath = ".config/backupboxxx.json" // $HOME/.config/backupboxxx.json
 )
 
-// {
-//   "access_token": "abcdefghijklmnopqrstuvwxyz0123456789"
-// }
 type config struct {
 	// Developers page > App console > [Your App] > Settings > OAuth2 > Generated access token > Generate
-	AccessToken string `json:"access_token"`
+	//
+	// example:
+	//
+	// {
+	//   "access_token": "abcdefghijklmnopqrstuvwxyz0123456789"
+	// }
+	AccessToken string `json:"access_token,omitempty"`
 }
 
 var _usersDir string
@@ -178,9 +181,11 @@ func printUsage() {
 
 # show this message
 $ ./backupboxxx -h
+$ ./backupboxxx --help
 
 # print out a sample backup list file
 $ ./backupboxxx -g
+$ ./backupboxxx --generate
 
 # do backup
 $ ./backupboxxx backup_list.json
@@ -222,9 +227,9 @@ func main() {
 		if len(os.Args) < 2 {
 			printUsage()
 		} else {
-			if isInList(os.Args, "-h") { // help
+			if isInList(os.Args, "-h") || isInList(os.Args, "--help") { // help
 				printUsage()
-			} else if isInList(os.Args, "-g") { // generate a list file
+			} else if isInList(os.Args, "-g") || isInList(os.Args, "--generate") { // generate a list file
 				printSampleList()
 			} else {
 				backup(files.New(dropbox.Config{
