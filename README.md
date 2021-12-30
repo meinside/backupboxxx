@@ -5,7 +5,7 @@ Backups local files to your Dropbox account.
 ## install
 
 ```bash
-$ go get -u github.com/meinside/backupboxxx
+$ go install github.com/meinside/backupboxxx@latest
 ```
 
 ## setup
