@@ -1,8 +1,8 @@
 module github.com/meinside/backupboxxx
 
-go 1.17
+go 1.18
 
-require github.com/dropbox/dropbox-sdk-go-unofficial/v6 v6.0.3
+require github.com/dropbox/dropbox-sdk-go-unofficial/v6 v6.0.4
 
 require (
 	github.com/golang/protobuf v1.4.2 // indirect

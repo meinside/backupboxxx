@@ -89,11 +89,13 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 			if reader, err := os.Open(path); err == nil {
 				defer reader.Close()
 
-				if _, err := client.Upload(&files.CommitInfo{
-					Path:       filepath.Join("/", root, path),
-					Mode:       &files.WriteMode{Tagged: dropbox.Tagged{Tag: "overwrite"}}, // overwrite!
-					Autorename: false,
-					Mute:       false,
+				if _, err := client.Upload(&files.UploadArg{
+					CommitInfo: files.CommitInfo{
+						Path:       filepath.Join("/", root, path),
+						Mode:       &files.WriteMode{Tagged: dropbox.Tagged{Tag: "overwrite"}}, // overwrite!
+						Autorename: false,
+						Mute:       false,
+					},
 				}, reader); err == nil {
 					_stdout.Printf("> uploaded successfully: %s\n", path)
 				} else {
