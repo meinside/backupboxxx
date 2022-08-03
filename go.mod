@@ -1,6 +1,6 @@
 module github.com/meinside/backupboxxx
 
-go 1.18
+go 1.19
 
 require github.com/dropbox/dropbox-sdk-go-unofficial/v6 v6.0.4
 
