@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -52,7 +51,7 @@ func loadConf() (conf config, err error) {
 		fpath := filepath.Join(usr.HomeDir, configFilepath)
 
 		var bytes []byte
-		if bytes, err = ioutil.ReadFile(fpath); err == nil {
+		if bytes, err = os.ReadFile(fpath); err == nil {
 			if err = json.Unmarshal(bytes, &conf); err == nil {
 				return conf, nil
 			}
@@ -78,7 +77,7 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 
 	if stat, err := os.Stat(path); err == nil {
 		if stat.IsDir() {
-			if _files, err := ioutil.ReadDir(path); err == nil {
+			if _files, err := os.ReadDir(path); err == nil {
 				for _, file := range _files {
 					uploadFile(client, root, filepath.Join(path, file.Name()), ignore)
 				}
@@ -133,7 +132,7 @@ func readBackupList(path string) *BackupList {
 	if _, err := os.Stat(path); err != nil {
 		_stderr.Fatalf("* failed to stat config file (%s)\n", err)
 	} else {
-		if file, err := ioutil.ReadFile(path); err != nil {
+		if file, err := os.ReadFile(path); err != nil {
 			_stderr.Fatalf("* failed to read config file (%s)\n", err)
 		} else {
 			if err := json.Unmarshal(file, &list); err != nil {
