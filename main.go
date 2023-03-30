@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	configFilepath = ".config/backupboxxx.json" // $HOME/.config/backupboxxx.json
+	applicationName = "backupboxxx"
+	configFilename  = "config.json"
 )
 
 type config struct {
@@ -46,15 +47,27 @@ func init() {
 
 // load config file
 func loadConf() (conf config, err error) {
-	var usr *user.User
-	if usr, err = user.Current(); err == nil {
-		fpath := filepath.Join(usr.HomeDir, configFilepath)
+	// https://xdgbasedirectoryspecification.com
+	configDir := os.Getenv("XDG_CONFIG_HOME")
 
-		var bytes []byte
-		if bytes, err = os.ReadFile(fpath); err == nil {
-			if err = json.Unmarshal(bytes, &conf); err == nil {
-				return conf, nil
-			}
+	// If the value of the environment variable is unset, empty, or not an absolute path, use the default
+	if configDir == "" || configDir[0:1] != "/" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			_stderr.Fatalf("* failed to get home directory (%s)\n", err)
+		} else {
+			configDir = filepath.Join(homeDir, ".config", applicationName)
+		}
+	} else {
+		configDir = filepath.Join(configDir, applicationName)
+	}
+
+	configFilepath := filepath.Join(configDir, configFilename)
+
+	var bytes []byte
+	if bytes, err = os.ReadFile(configFilepath); err == nil {
+		if err = json.Unmarshal(bytes, &conf); err == nil {
+			return conf, nil
 		}
 	}
 
@@ -130,13 +143,13 @@ func readBackupList(path string) *BackupList {
 
 	list := new(BackupList)
 	if _, err := os.Stat(path); err != nil {
-		_stderr.Fatalf("* failed to stat config file (%s)\n", err)
+		_stderr.Fatalf("* failed to stat backup list file (%s)\n", err)
 	} else {
 		if file, err := os.ReadFile(path); err != nil {
-			_stderr.Fatalf("* failed to read config file (%s)\n", err)
+			_stderr.Fatalf("* failed to read backup list file (%s)\n", err)
 		} else {
 			if err := json.Unmarshal(file, &list); err != nil {
-				_stderr.Fatalf("* failed to parse config file (%s)\n", err)
+				_stderr.Fatalf("* failed to parse backup list file (%s)\n", err)
 			}
 		}
 	}

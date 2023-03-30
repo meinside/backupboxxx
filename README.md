@@ -10,13 +10,13 @@ $ go install github.com/meinside/backupboxxx@latest
 
 ## setup
 
-Get your access token from:
+Get your Dropbox access token from:
 
 ```
 Developers page > App console > [Your App] > Settings > OAuth2 > Generated access token > Generate
 ```
 
-then create a file named `backupboxxx.json` in your `$HOME/.config/` directory:
+then create a file named `config.json` in `$XDG_CONFIG_HOME/backupboxxx/` or `$HOME/.config/backupboxxx` directory:
 
 ```json
 {
@@ -46,7 +46,13 @@ After that, create a backup list file:
 
 ## run
 
+Now run with the backup list file:
+
 ```bash
 $ $GOPATH/bin/backupboxxx [backup-list-filepath]
 ```
+
+## license
+
+MIT
 
