@@ -11,6 +11,9 @@ import (
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
+
+	"github.com/meinside/infisical-go"
+	"github.com/meinside/infisical-go/helper"
 )
 
 const (
@@ -27,6 +30,15 @@ type config struct {
 	//   "access_token": "abcdefghijklmnopqrstuvwxyz0123456789"
 	// }
 	AccessToken string `json:"access_token,omitempty"`
+
+	// or Infisical settings
+	Infisical *struct {
+		WorkspaceID        string               `json:"workspace_id"`
+		Token              string               `json:"token"`
+		Environment        string               `json:"environment"`
+		SecretType         infisical.SecretType `json:"secret_type"`
+		AccessTokenKeyPath string               `json:"key_path"`
+	} `json:"infisical,omitempty"`
 }
 
 var _usersDir string
@@ -67,7 +79,20 @@ func loadConf() (conf config, err error) {
 	var bytes []byte
 	if bytes, err = os.ReadFile(configFilepath); err == nil {
 		if err = json.Unmarshal(bytes, &conf); err == nil {
-			return conf, nil
+			if conf.AccessToken == "" && conf.Infisical != nil {
+				// read access token from infisical
+				var accessToken string
+				accessToken, err = helper.Value(
+					conf.Infisical.WorkspaceID,
+					conf.Infisical.Token,
+					conf.Infisical.Environment,
+					conf.Infisical.SecretType,
+					conf.Infisical.AccessTokenKeyPath,
+				)
+				conf.AccessToken = accessToken
+			}
+
+			return conf, err
 		}
 	}
 
