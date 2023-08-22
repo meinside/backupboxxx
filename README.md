@@ -24,6 +24,8 @@ then create a file named `config.json` in `$XDG_CONFIG_HOME/backupboxxx/` or `$H
 }
 ```
 
+### Using Infisical
+
 You can also use [Infisical](https://infisical.com/) for retrieving your access token:
 
 ```json
@@ -38,7 +40,26 @@ You can also use [Infisical](https://infisical.com/) for retrieving your access 
 }
 ```
 
-After that, create a backup list file:
+If your Infisical workspace's E2EE setting is enabled, you also need to provide your API key:
+
+```json
+{
+  "infisical": {
+    "e2ee": true,
+    "api_key": "ak.1234567890.abcdefghijk",
+
+    "workspace_id": "012345abcdefg",
+    "token": "st.xyzwabcd.0987654321.abcdefghijklmnop",
+    "environment": "dev",
+    "secret_type": "shared",
+    "key_path": "/path/to/your/KEY_TO_ACCESS_TOKEN"
+  }
+}
+```
+
+## Backup List
+
+After configuration, create a backup list file:
 
 ```json
 {
