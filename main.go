@@ -45,6 +45,42 @@ type config struct {
 	} `json:"infisical,omitempty"`
 }
 
+// get access token, retrieve it from infisical if needed
+func (c *config) GetAccessToken() string {
+	if c.AccessToken == "" && c.Infisical != nil {
+		var accessToken string
+
+		// read access token from infisical
+		var err error
+		if c.Infisical.E2EE && c.Infisical.APIKey != nil {
+			accessToken, err = helper.E2EEValue(
+				*c.Infisical.APIKey,
+				c.Infisical.WorkspaceID,
+				c.Infisical.Token,
+				c.Infisical.Environment,
+				c.Infisical.SecretType,
+				c.Infisical.AccessTokenKeyPath,
+			)
+		} else {
+			accessToken, err = helper.Value(
+				c.Infisical.WorkspaceID,
+				c.Infisical.Token,
+				c.Infisical.Environment,
+				c.Infisical.SecretType,
+				c.Infisical.AccessTokenKeyPath,
+			)
+		}
+
+		if err != nil {
+			_stderr.Printf("* failed to retrieve access token from infisical: %s\n", err)
+		}
+
+		c.AccessToken = accessToken
+	}
+
+	return c.AccessToken
+}
+
 var _usersDir string
 
 // loggers
@@ -83,31 +119,6 @@ func loadConf() (conf config, err error) {
 	var bytes []byte
 	if bytes, err = os.ReadFile(configFilepath); err == nil {
 		if err = json.Unmarshal(bytes, &conf); err == nil {
-			if conf.AccessToken == "" && conf.Infisical != nil {
-				// read access token from infisical
-				var accessToken string
-
-				if conf.Infisical.E2EE && conf.Infisical.APIKey != nil {
-					accessToken, err = helper.E2EEValue(
-						*conf.Infisical.APIKey,
-						conf.Infisical.WorkspaceID,
-						conf.Infisical.Token,
-						conf.Infisical.Environment,
-						conf.Infisical.SecretType,
-						conf.Infisical.AccessTokenKeyPath,
-					)
-				} else {
-					accessToken, err = helper.Value(
-						conf.Infisical.WorkspaceID,
-						conf.Infisical.Token,
-						conf.Infisical.Environment,
-						conf.Infisical.SecretType,
-						conf.Infisical.AccessTokenKeyPath,
-					)
-				}
-				conf.AccessToken = accessToken
-			}
-
 			return conf, err
 		}
 	}
@@ -292,7 +303,7 @@ func main() {
 				printSampleList()
 			} else {
 				backup(files.New(dropbox.Config{
-					Token: conf.AccessToken,
+					Token: conf.GetAccessToken(),
 				}),
 					os.Args[1],
 				)
