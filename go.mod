@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	github.com/dropbox/dropbox-sdk-go-unofficial/v6 v6.0.5
-	github.com/meinside/infisical-go v0.0.9
+	github.com/meinside/infisical-go v0.0.18
 )
 
 require (
