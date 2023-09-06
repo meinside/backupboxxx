@@ -1,3 +1,18 @@
 {
-    "access_token": "aAbBcCdDeEfFgG-0123456789-xyzwXYZW"
+    // (A) your dropbox access token here,
+    "access_token": "aAbBcCdDeEfFgG-0123456789-xyzwXYZW",
+
+    // (B) or, your infisical values here
+    "infisical": {
+        // NOTE: if your workspace's E2EE setting is enabled, you should set `e2ee` to true and provide its `api_key`
+        "e2ee": true,
+        "api_key": "ak.1234567890.abcdefghijk",
+
+        // values for your desired secret key:
+        "workspace_id": "012345abcdefg",
+        "token": "st.xyzwabcd.0987654321.abcdefghijklmnop",
+        "environment": "dev",
+        "secret_type": "shared",
+        "key_path": "/path/to/your/KEY_TO_ACCESS_TOKEN",
+    },
 }
