@@ -12,6 +12,8 @@ import (
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
 
+	"github.com/tailscale/hujson"
+
 	"github.com/meinside/infisical-go"
 	"github.com/meinside/infisical-go/helper"
 )
@@ -97,6 +99,17 @@ func init() {
 	}
 }
 
+// standardize given JSON (JWCC) bytes
+func standardizeJSON(b []byte) ([]byte, error) {
+	ast, err := hujson.Parse(b)
+	if err != nil {
+		return b, err
+	}
+	ast.Standardize()
+
+	return ast.Pack(), nil
+}
+
 // load config file
 func loadConf() (conf config, err error) {
 	// https://xdgbasedirectoryspecification.com
@@ -118,8 +131,10 @@ func loadConf() (conf config, err error) {
 
 	var bytes []byte
 	if bytes, err = os.ReadFile(configFilepath); err == nil {
-		if err = json.Unmarshal(bytes, &conf); err == nil {
-			return conf, err
+		if bytes, err = standardizeJSON(bytes); err == nil {
+			if err = json.Unmarshal(bytes, &conf); err == nil {
+				return conf, err
+			}
 		}
 	}
 
@@ -197,11 +212,13 @@ func readBackupList(path string) *BackupList {
 	if _, err := os.Stat(path); err != nil {
 		_stderr.Fatalf("* failed to stat backup list file (%s)\n", err)
 	} else {
-		if file, err := os.ReadFile(path); err != nil {
+		if bytes, err := os.ReadFile(path); err != nil {
 			_stderr.Fatalf("* failed to read backup list file (%s)\n", err)
 		} else {
-			if err := json.Unmarshal(file, &list); err != nil {
-				_stderr.Fatalf("* failed to parse backup list file (%s)\n", err)
+			if bytes, err := standardizeJSON(bytes); err == nil {
+				if err := json.Unmarshal(bytes, &list); err != nil {
+					_stderr.Fatalf("* failed to parse backup list file (%s)\n", err)
+				}
 			}
 		}
 	}
@@ -243,7 +260,8 @@ func isInList(list []string, element string) bool {
 
 // print usage
 func printUsage() {
-	_stdout.Printf(`> usage:
+	_stdout.Printf(`
+> usage:
 
 # show this message
 $ %[1]v -h
@@ -255,27 +273,34 @@ $ %[1]v --generate
 
 # do backup
 $ %[1]v backup_list.json
-`, os.Args[0])
+
+`, filepath.Base(os.Args[0]))
 }
 
 // print sample list
 func printSampleList() {
 	_stdout.Printf(`
+// sample list in JSON(JWCC)
 {
+	// destination directory's name
 	"dirname": "backup_20190605",
+
+	// file paths that will be backed up
 	"files": [
 		"/etc/sysctl.conf",
 		"/etc/dhcp/dhclient.conf",
 		"/etc/samba/smb.conf",
 		"~/.custom_aliases",
-		"~/files/photos"
+		"~/files/photos",
 	],
+
+	// names that will be ignored
 	"ignore": [
 		".ssh",
 		".git",
 		".svn",
-		".DS_Store"
-	]
+		".DS_Store",
+	],
 }
 `)
 }
@@ -289,26 +314,23 @@ func main() {
 	var conf config
 	var err error
 
-	if isInList(os.Args, "-h") || isInList(os.Args, "--help") { // help
+	// help
+	if isInList(os.Args, "-h") || isInList(os.Args, "--help") || len(os.Args) < 2 {
 		printUsage()
 
 		os.Exit(0)
 	}
 
+	// generate a list file
+	if isInList(os.Args, "-g") || isInList(os.Args, "--generate") {
+		printSampleList()
+
+		os.Exit(0)
+	}
+
+	// load configuration and do backup
 	if conf, err = loadConf(); err == nil {
-		if len(os.Args) < 2 {
-			printUsage()
-		} else {
-			if isInList(os.Args, "-g") || isInList(os.Args, "--generate") { // generate a list file
-				printSampleList()
-			} else {
-				backup(files.New(dropbox.Config{
-					Token: conf.GetAccessToken(),
-				}),
-					os.Args[1],
-				)
-			}
-		}
+		backup(files.New(dropbox.Config{Token: conf.GetAccessToken()}), os.Args[1])
 	} else {
 		printErrorAndExit(err)
 	}
