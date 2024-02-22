@@ -26,36 +26,23 @@ then create a file named `config.json` in `$XDG_CONFIG_HOME/backupboxxx/` or `$H
 
 ### Using Infisical
 
-You can also use [Infisical](https://infisical.com/) for retrieving your access token:
+You can also use [Infisical](https://infisical.com/) for retrieving your Dropbox access token:
 
 ```json
 {
   "infisical": {
+    "client_id": "012345-abcdefg-987654321",
+    "client_secret": "aAbBcCdDeEfFgG0123456789xyzwXYZW",
+
     "workspace_id": "012345abcdefg",
-    "token": "st.xyzwabcd.0987654321.abcdefghijklmnop",
     "environment": "dev",
     "secret_type": "shared",
-    "key_path": "/path/to/your/KEY_TO_ACCESS_TOKEN"
+    "key_path": "/path/to/your/KEY_TO_DROPBOX_ACCESS_TOKEN"
   }
 }
 ```
 
-If your Infisical workspace's E2EE setting is enabled, you also need to provide your API key:
-
-```json
-{
-  "infisical": {
-    "e2ee": true,
-    "api_key": "ak.1234567890.abcdefghijk",
-
-    "workspace_id": "012345abcdefg",
-    "token": "st.xyzwabcd.0987654321.abcdefghijklmnop",
-    "environment": "dev",
-    "secret_type": "shared",
-    "key_path": "/path/to/your/KEY_TO_ACCESS_TOKEN"
-  }
-}
-```
+You can get `client_id` and `client_secret` from the access control page of your Infisical project.
 
 ## Backup List
 
