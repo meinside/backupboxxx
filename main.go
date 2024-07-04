@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -12,10 +13,9 @@ import (
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox/files"
 
+	infisical "github.com/infisical/go-sdk"
+	"github.com/infisical/go-sdk/packages/models"
 	"github.com/tailscale/hujson"
-
-	"github.com/meinside/infisical-go"
-	"github.com/meinside/infisical-go/helper"
 )
 
 const (
@@ -31,7 +31,7 @@ type config struct {
 	// {
 	//   "access_token": "abcdefghijklmnopqrstuvwxyz0123456789"
 	// }
-	AccessToken string `json:"access_token,omitempty"` // Dropbox access token
+	AccessToken *string `json:"access_token,omitempty"` // Dropbox access token
 
 	// or Infisical settings
 	Infisical *struct {
@@ -39,37 +39,47 @@ type config struct {
 		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 
-		WorkspaceID        string               `json:"workspace_id"`
-		Environment        string               `json:"environment"`
-		SecretType         infisical.SecretType `json:"secret_type"`
-		AccessTokenKeyPath string               `json:"key_path"`
+		ProjectID          string `json:"project_id"`
+		Environment        string `json:"environment"`
+		SecretType         string `json:"secret_type"`
+		AccessTokenKeyPath string `json:"key_path"`
 	} `json:"infisical,omitempty"`
 }
 
-// get access token, retrieve it from infisical if needed
-func (c *config) GetAccessToken() string {
-	if c.AccessToken == "" && c.Infisical != nil {
-		var accessToken string
-
+// GetAccessToken returns your access token of Dropbox
+//
+// (retrieve it from infisical if needed)
+func (c *config) GetAccessToken() (accessToken *string, err error) {
+	if (c.AccessToken == nil || len(*c.AccessToken) == 0) &&
+		c.Infisical != nil {
 		// read access token from infisical
-		var err error
-		accessToken, err = helper.Value(
-			c.Infisical.ClientID,
-			c.Infisical.ClientSecret,
-			c.Infisical.WorkspaceID,
-			c.Infisical.Environment,
-			c.Infisical.SecretType,
-			c.Infisical.AccessTokenKeyPath,
-		)
+		client := infisical.NewInfisicalClient(infisical.Config{
+			SiteUrl: "https://app.infisical.com",
+		})
 
+		_, err = client.Auth().UniversalAuthLogin(c.Infisical.ClientID, c.Infisical.ClientSecret)
 		if err != nil {
-			_stderr.Printf("* failed to retrieve Dropbox access token from infisical: %s\n", err)
+			_stderr.Printf("* failed to authenticate with Infisical: %s", err)
+			return nil, err
 		}
 
-		c.AccessToken = accessToken
+		var secret models.Secret
+		secret, err = client.Secrets().Retrieve(infisical.RetrieveSecretOptions{
+			SecretKey:   path.Base(c.Infisical.AccessTokenKeyPath),
+			SecretPath:  path.Dir(c.Infisical.AccessTokenKeyPath),
+			ProjectID:   c.Infisical.ProjectID,
+			Type:        c.Infisical.SecretType,
+			Environment: c.Infisical.Environment,
+		})
+		if err != nil {
+			_stderr.Printf("* failed to retrieve Dropbox access token from infisical: %s\n", err)
+			return nil, err
+		}
+
+		c.AccessToken = &secret.SecretValue
 	}
 
-	return c.AccessToken
+	return c.AccessToken, nil
 }
 
 var _usersDir string
@@ -319,8 +329,14 @@ func main() {
 
 	// load configuration and do backup
 	if conf, err = loadConf(); err == nil {
-		backup(files.New(dropbox.Config{Token: conf.GetAccessToken()}), os.Args[1])
-	} else {
-		printErrorAndExit(err)
+		var token *string
+		if token, err = conf.GetAccessToken(); err == nil {
+			backup(files.New(dropbox.Config{Token: *token}), os.Args[1])
+
+			os.Exit(0)
+		}
 	}
+
+	// exit with error
+	printErrorAndExit(err)
 }
