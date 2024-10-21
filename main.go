@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"os"
@@ -46,14 +47,14 @@ type config struct {
 	} `json:"infisical,omitempty"`
 }
 
-// GetAccessToken returns your access token of Dropbox
+// return your access token of Dropbox
 //
 // (retrieve it from infisical if needed)
-func (c *config) GetAccessToken() (accessToken *string, err error) {
+func (c *config) getAccessToken() (accessToken *string, err error) {
 	if (c.AccessToken == nil || len(*c.AccessToken) == 0) &&
 		c.Infisical != nil {
 		// read access token from infisical
-		client := infisical.NewInfisicalClient(infisical.Config{
+		client := infisical.NewInfisicalClient(context.TODO(), infisical.Config{
 			SiteUrl: "https://app.infisical.com",
 		})
 
@@ -330,7 +331,7 @@ func main() {
 	// load configuration and do backup
 	if conf, err = loadConf(); err == nil {
 		var token *string
-		if token, err = conf.GetAccessToken(); err == nil {
+		if token, err = conf.getAccessToken(); err == nil {
 			backup(files.New(dropbox.Config{Token: *token}), os.Args[1])
 
 			os.Exit(0)
