@@ -4,9 +4,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/dropbox/dropbox-sdk-go-unofficial/v6/dropbox"
@@ -14,7 +17,19 @@ import (
 	"github.com/fatih/color"
 )
 
-// upload file to Dropbox
+var _usersDir string
+
+// initialize os-specific values
+func init() {
+	switch runtime.GOOS {
+	case "darwin":
+		_usersDir = "/Users"
+	default:
+		_usersDir = "/home"
+	}
+}
+
+// upload file to Dropbox (ignore error)
 func uploadFile(client files.Client, root string, path string, ignore []string) {
 	if isInList(ignore, filepath.Base(path)) {
 		printColored(color.FgYellow, "> ignoring: %s\n", path)
@@ -23,8 +38,8 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 
 	if stat, err := os.Stat(path); err == nil {
 		if stat.IsDir() {
-			if _files, err := os.ReadDir(path); err == nil {
-				for _, file := range _files {
+			if fs, err := os.ReadDir(path); err == nil {
+				for _, file := range fs {
 					uploadFile(client, root, filepath.Join(path, file.Name()), ignore)
 				}
 			} else {
@@ -56,42 +71,46 @@ func uploadFile(client files.Client, root string, path string, ignore []string) 
 }
 
 // do backup with given backup file list
-func backup(client files.Client, binPath, backupListFilepath string) {
-	list := readBackupList(backupListFilepath)
+func backup(
+	client files.Client,
+	binPath string,
+	backupListFilepath string,
+) error {
+	printColored(color.FgHiWhite, "> reading backup list file: %s\n", backupListFilepath)
+
+	list, err := readBackupList(backupListFilepath)
+	if err != nil {
+		return fmt.Errorf("backup failed: %s", err)
+	}
 
 	dirname := list.Dirname
-	_files := list.Files
+	fs := list.Files
 	ignore := list.Ignore
 
 	printColored(color.FgHiWhite, "> destination dir: %s\n", dirname)
 
-	for _, file := range _files {
+	for _, file := range fs {
 		uploadFile(client, dirname, expandPath(file, binPath), ignore)
 	}
+
+	return nil
 }
 
 // read backup list file
-func readBackupList(path string) *BackupList {
-	printColored(color.FgHiWhite, "> reading backup list file: %s\n", path)
-
-	list := new(BackupList)
-	if _, err := os.Stat(path); err != nil {
-		printColored(color.FgHiRed, "* failed to stat backup list file (%s)\n", err)
-		os.Exit(1)
-	} else {
-		if bytes, err := os.ReadFile(path); err != nil {
-			printColored(color.FgHiRed, "* failed to read backup list file (%s)\n", err)
-			os.Exit(1)
-		} else {
-			if bytes, err := standardizeJSON(bytes); err == nil {
-				if err := json.Unmarshal(bytes, &list); err != nil {
-					printColored(color.FgHiRed, "* failed to parse backup list file (%s)\n", err)
-					os.Exit(1)
+func readBackupList(path string) (list *backupList, err error) {
+	list = new(backupList)
+	if _, err = os.Stat(path); err == nil {
+		var bytes []byte
+		if bytes, err = os.ReadFile(path); err == nil {
+			if bytes, err = standardizeJSON(bytes); err == nil {
+				if err = json.Unmarshal(bytes, &list); err == nil {
+					return list, nil
 				}
 			}
 		}
 	}
-	return list
+
+	return nil, fmt.Errorf("failed to read backup list: %s", err)
 }
 
 // expand given path
@@ -119,17 +138,14 @@ func expandPath(path, binPath string) string {
 
 // check if given element is in the list or not
 func isInList(list []string, element string) bool {
-	for _, value := range list {
-		if value == element {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, element)
 }
 
-// print usage
+// print usage and exit(0)
 func printUsage(binPath string) {
-	printColored(color.FgWhite, `
+	printColored(
+		color.FgWhite,
+		`
 > usage:
 
 # show this message
@@ -143,12 +159,18 @@ $ %[1]v --generate
 # do backup
 $ %[1]v backup_list.json
 
-`, filepath.Base(binPath))
+`,
+		filepath.Base(binPath),
+	)
+
+	os.Exit(0)
 }
 
-// print sample list
+// print sample list and exit(0)
 func printSampleList() {
-	printColored(color.FgCyan, `
+	printColored(
+		color.FgCyan,
+		`
 // sample list in JSON(JWCC)
 {
 	// destination directory's name
@@ -171,14 +193,13 @@ func printSampleList() {
 		".DS_Store",
 	],
 }
-`)
+`,
+	)
+
+	os.Exit(0)
 }
 
-// print error and exit
-func printErrorAndExit(err error) {
-	printColored(color.FgRed, "%s", err.Error())
-}
-
+// run application
 func run(args []string) {
 	var conf config
 	var err error
@@ -186,28 +207,27 @@ func run(args []string) {
 	// help
 	if isInList(args, "-h") || isInList(args, "--help") || len(args) < 2 {
 		printUsage(args[0])
-
-		os.Exit(0)
 	}
 
 	// generate a list file
 	if isInList(args, "-g") || isInList(args, "--generate") {
 		printSampleList()
-
-		os.Exit(0)
 	}
 
 	// load configuration and do backup
 	if conf, err = loadConf(); err == nil {
 		var token *string
 		if token, err = conf.getAccessToken(); err == nil {
-			backup(
+			err = backup(
 				files.New(dropbox.Config{Token: *token}),
 				args[0],
 				args[1],
 			)
 
-			os.Exit(0)
+			// success
+			if err == nil {
+				os.Exit(0)
+			}
 		}
 	}
 

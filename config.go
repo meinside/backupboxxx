@@ -15,6 +15,12 @@ import (
 	"github.com/tailscale/hujson"
 )
 
+const (
+	applicationName = "backupboxxx"
+	configFilename  = "config.json"
+)
+
+// config struct
 type config struct {
 	// Developers page > App console > [Your App] > Settings > OAuth2 > Generated access token > Generate
 	//
@@ -116,8 +122,8 @@ func loadConf() (conf config, err error) {
 	return config{}, err
 }
 
-// BackupList for listing files to backup
-type BackupList struct {
+// backupList for listing files to backup
+type backupList struct {
 	Dirname string   `json:"dirname"`
 	Files   []string `json:"files"`
 	Ignore  []string `json:"ignore"`
