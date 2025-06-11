@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/jwalton/go-supportscolor"
@@ -23,4 +24,11 @@ func printColored(
 	} else {
 		fmt.Print(formatted)
 	}
+}
+
+// print error and exit(1)
+func printErrorAndExit(err error) {
+	printColored(color.FgRed, "* %s\n", err.Error())
+
+	os.Exit(1)
 }
